@@ -1,0 +1,6 @@
+project            = "your-gcp-project-id"
+region             = "us-central1"
+zone               = "us-central1-a"
+machine_type       = "e2-standard-2"
+data_disk_size_gb  = 100
+tailscale_auth_key = "tskey-auth-..."

@@ -1,0 +1,11 @@
+.env
+terraform.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+vault/
+__pycache__/
+*.pyc
+cognee-data/
+cognee-system/

@@ -1,0 +1,3 @@
+# DEPRECATED — this repo now uses Cognee, not Graphiti.
+# Configuration is handled via .env (see .env.example).
+# This file is kept to avoid breaking git history; it is not used.
