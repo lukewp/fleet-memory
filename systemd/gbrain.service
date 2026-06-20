@@ -1,0 +1,19 @@
+[Unit]
+Description=gbrain MCP Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=luke_hayloftadvisors_com
+WorkingDirectory=/data/gbrain
+EnvironmentFile=/data/fleet-memory/.env
+ExecStart=/home/luke_hayloftadvisors_com/.bun/bin/bun run src/cli.ts serve --http --port 8787 --public-url https://fleet-memory.tailc897e6.ts.net --bind 0.0.0.0
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gbrain
+
+[Install]
+WantedBy=multi-user.target

@@ -79,4 +79,16 @@ DATA_OWNER=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 {print $1; exit}'
 DATA_OWNER=$${DATA_OWNER:-ubuntu}
 chown -R "$DATA_OWNER:$DATA_OWNER" /data
 
+# --- Install gbrain systemd service ---
+if [ ! -f /etc/systemd/system/gbrain.service ]; then
+  sed "s|User=.*|User=$DATA_OWNER|g; s|ExecStart=.*bun|ExecStart=/home/$DATA_OWNER/.bun/bin/bun|g" \
+    /data/fleet-memory/systemd/gbrain.service > /etc/systemd/system/gbrain.service
+  systemctl daemon-reload
+  systemctl enable gbrain
+  echo "gbrain systemd service installed"
+fi
+
+# --- Set up Tailscale Funnel (persistent via --bg) ---
+tailscale funnel --bg 8787 2>/dev/null || true
+
 echo "=== Fleet Memory setup complete $(date) ==="

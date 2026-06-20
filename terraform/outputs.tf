@@ -15,5 +15,5 @@ output "ssh_command" {
 }
 
 output "gbrain_mcp" {
-  value = "http://fleet-memory:8080"
+  value = "http://fleet-memory:3131/mcp"
 }
