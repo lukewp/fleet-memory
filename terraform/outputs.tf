@@ -14,10 +14,6 @@ output "ssh_command" {
   value = "gcloud compute ssh ubuntu@${google_compute_instance.fleet_memory.name} --zone=${var.zone}"
 }
 
-output "cognee_api" {
-  value = "http://fleet-memory:8000"
-}
-
-output "cognee_mcp" {
-  value = "http://fleet-memory:8001"
+output "gbrain_mcp" {
+  value = "http://fleet-memory:8080"
 }

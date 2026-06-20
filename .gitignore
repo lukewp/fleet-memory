@@ -1,5 +1,5 @@
 .env
-terraform.tfvars
+*.tfvars
 *.tfstate
 *.tfstate.backup
 .terraform/
@@ -7,5 +7,4 @@ terraform.tfvars
 vault/
 __pycache__/
 *.pyc
-cognee-data/
-cognee-system/
+node_modules/

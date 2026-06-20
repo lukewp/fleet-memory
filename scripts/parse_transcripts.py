@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """
-Parse OpenClaw JSONL session transcripts and optionally ingest into Cognee.
+Parse OpenClaw JSONL session transcripts into markdown files.
 
 Extracts conversation turns (user + assistant text) from session JSONL files,
 stripping tool_use blocks, tool_result blocks, and raw file contents.
+Output markdown files can then be imported into gbrain via `gbrain import`.
 
 Usage:
-    # Parse to markdown files (no ingestion)
     python scripts/parse_transcripts.py /path/to/sessions/ --agent myagent \
         --output /data/vault/transcripts/myagent/
 
-    # Parse and ingest directly into Cognee
-    python scripts/parse_transcripts.py /path/to/sessions/ --agent myagent \
-        --ingest --server http://localhost:8000
+    # Then import into gbrain:
+    # gbrain import /data/vault/transcripts/myagent/
 
     # Dry run
     python scripts/parse_transcripts.py /path/to/sessions/ --agent myagent --dry-run
@@ -23,13 +22,9 @@ import json
 import os
 import sys
 import glob
-import time
 from datetime import datetime
 from pathlib import Path
 
-import httpx
-
-DEFAULT_SERVER = os.environ.get("COGNEE_SERVER", "http://localhost:8000")
 MAX_CHARS_PER_SESSION = 30_000
 
 
@@ -126,21 +121,15 @@ def find_session_files(sessions_dir: str) -> list[str]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Parse OpenClaw transcripts")
+    parser = argparse.ArgumentParser(description="Parse OpenClaw transcripts to markdown")
     parser.add_argument("sessions_dir", help="Directory containing JSONL session files")
-    parser.add_argument("--agent", required=True, help="Agent name (used as Cognee dataset name)")
-    parser.add_argument("--output", help="Output directory for parsed .md files")
-    parser.add_argument("--ingest", action="store_true", help="Ingest directly into Cognee")
-    parser.add_argument("--server", default=DEFAULT_SERVER, help="Cognee API server URL")
+    parser.add_argument("--agent", required=True, help="Agent name (used in output filenames)")
+    parser.add_argument("--output", required=True, help="Output directory for parsed .md files")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be processed")
     parser.add_argument("--max-chars", type=int, default=MAX_CHARS_PER_SESSION)
     parser.add_argument("--skip-existing", action="store_true", help="Skip sessions already in output dir")
     parser.add_argument("--limit", type=int, help="Process only N sessions")
-    parser.add_argument("--skip-cognify", action="store_true", help="Add data but don't build graph")
     args = parser.parse_args()
-
-    if not args.output and not args.ingest and not args.dry_run:
-        parser.error("Specify --output (save .md files), --ingest (send to Cognee), or --dry-run")
 
     files = find_session_files(args.sessions_dir)
     print(f"Found {len(files)} session files in {args.sessions_dir}")
@@ -148,17 +137,8 @@ def main():
     if args.limit:
         files = files[:args.limit]
 
-    if args.output:
+    if not args.dry_run:
         os.makedirs(args.output, exist_ok=True)
-
-    client = None
-    if args.ingest and not args.dry_run:
-        client = httpx.Client()
-        resp = client.get(f"{args.server}/health", timeout=10.0)
-        if resp.status_code != 200:
-            print(f"Cognee not reachable at {args.server}")
-            sys.exit(1)
-        print("Connected to Cognee.\n")
 
     success = 0
     skipped = 0
@@ -166,7 +146,7 @@ def main():
     for i, filepath in enumerate(files, 1):
         session_id = os.path.basename(filepath).split(".")[0]
 
-        if args.skip_existing and args.output:
+        if args.skip_existing:
             if os.path.exists(os.path.join(args.output, f"{session_id}.md")):
                 skipped += 1
                 continue
@@ -194,49 +174,19 @@ def main():
             success += 1
             continue
 
-        if args.output:
-            outfile = os.path.join(args.output, f"{session_id}.md")
-            header = f"# {args.agent} session {session_id[:8]}\n"
-            if ts_str:
-                header += f"Date: {ts_str}\n"
-            header += f"Turns: {result['turns']}\n\n---\n\n"
-            with open(outfile, "w") as f:
-                f.write(header + result["text"])
-            print(f"  {info} [saved]")
-            success += 1
+        outfile = os.path.join(args.output, f"{session_id}.md")
+        header = f"# {args.agent} session {session_id[:8]}\n"
+        if ts_str:
+            header += f"Date: {ts_str}\n"
+        header += f"Turns: {result['turns']}\n\n---\n\n"
+        with open(outfile, "w") as f:
+            f.write(header + result["text"])
+        print(f"  {info} [saved]")
+        success += 1
 
-        if args.ingest:
-            try:
-                start = time.time()
-                resp = client.post(
-                    f"{args.server}/api/v1/add",
-                    json={"data": result["text"], "dataset_name": args.agent},
-                    timeout=60.0,
-                )
-                resp.raise_for_status()
-                elapsed = time.time() - start
-                print(f"  {info} [ingested {elapsed:.1f}s]")
-                success += 1
-            except Exception as e:
-                print(f"  {info} [ERROR: {e}]")
-
-    if client:
-        if success > 0 and not args.skip_cognify:
-            print(f"\nBuilding knowledge graph for '{args.agent}'...")
-            try:
-                resp = client.post(
-                    f"{args.server}/api/v1/cognify",
-                    json={"datasets": [args.agent]},
-                    timeout=600.0,
-                )
-                resp.raise_for_status()
-                print("Cognify complete.")
-            except Exception as e:
-                print(f"Cognify error: {e}")
-        client.close()
-
-    mode = "DRY RUN" if args.dry_run else "Done"
-    print(f"\n{mode}: {success} processed, {skipped} skipped")
+    print(f"\n{'DRY RUN' if args.dry_run else 'Done'}: {success} processed, {skipped} skipped")
+    if success > 0 and not args.dry_run:
+        print(f"\nNext: gbrain import {args.output}")
 
 
 if __name__ == "__main__":
