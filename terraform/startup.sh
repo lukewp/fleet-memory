@@ -38,8 +38,8 @@ if ! command -v bun &>/dev/null; then
   echo "Bun installed"
 fi
 
-# --- Unattended security upgrades ---
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unattended-upgrades
+# --- System packages ---
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unzip git unattended-upgrades
 echo 'Unattended-Upgrade::Automatic-Reboot "false";' > /etc/apt/apt.conf.d/51fleet-memory
 
 # --- Create data directories ---
@@ -47,7 +47,6 @@ mkdir -p /data/{brain,vault/{transcripts,notes}}
 
 # --- Clone fleet-memory repo (our config + scripts) ---
 if [ ! -d /data/fleet-memory ]; then
-  apt-get install -y -qq git
   git clone https://github.com/lukewp/fleet-memory.git /data/fleet-memory
   echo "Fleet-memory repo cloned"
 fi
@@ -77,7 +76,7 @@ EOF
 
 # --- Set ownership ---
 DATA_OWNER=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 {print $1; exit}')
-DATA_OWNER=${DATA_OWNER:-ubuntu}
+DATA_OWNER=$${DATA_OWNER:-ubuntu}
 chown -R "$DATA_OWNER:$DATA_OWNER" /data
 
 echo "=== Fleet Memory setup complete $(date) ==="
