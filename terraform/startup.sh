@@ -60,6 +60,16 @@ if [ ! -d /data/gbrain ]; then
   echo "gbrain installed"
 fi
 
+
+# --- Initialize brain git repo (needed for gbrain sync phase) ---
+if [ ! -d /data/brain/.git ]; then
+  cd /data/brain
+  git init
+  git add -A
+  git commit -m "Initialize brain" --allow-empty
+  echo "Brain git repo initialized"
+fi
+
 # --- Initialize vault git repo ---
 if [ ! -d /data/vault/.git ]; then
   cd /data/vault
@@ -78,6 +88,16 @@ EOF
 DATA_OWNER=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 {print $1; exit}')
 DATA_OWNER=$${DATA_OWNER:-ubuntu}
 chown -R "$DATA_OWNER:$DATA_OWNER" /data
+
+# --- Install gbrain CLI wrapper ---
+if [ ! -f /usr/local/bin/gbrain ]; then
+  cat > /usr/local/bin/gbrain << WRAPPER
+#!/bin/bash
+cd /data/gbrain && /home/$DATA_OWNER/.bun/bin/bun run src/cli.ts "\\\$@"
+WRAPPER
+  chmod +x /usr/local/bin/gbrain
+  echo "gbrain CLI wrapper installed"
+fi
 
 # --- Install gbrain systemd service ---
 if [ ! -f /etc/systemd/system/gbrain.service ]; then
