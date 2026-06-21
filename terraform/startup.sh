@@ -88,6 +88,16 @@ if [ ! -f /etc/systemd/system/gbrain.service ]; then
   echo "gbrain systemd service installed"
 fi
 
+# --- Install gbrain dream timer (nightly maintenance) ---
+if [ ! -f /etc/systemd/system/gbrain-dream.timer ]; then
+  cp /data/fleet-memory/systemd/gbrain-dream.service /etc/systemd/system/
+  cp /data/fleet-memory/systemd/gbrain-dream.timer /etc/systemd/system/
+  chmod +x /data/fleet-memory/systemd/gbrain-dream.sh
+  systemctl daemon-reload
+  systemctl enable --now gbrain-dream.timer
+  echo "gbrain dream timer installed (nightly at 3am)"
+fi
+
 # --- Set up Tailscale Funnel (persistent via --bg) ---
 tailscale funnel --bg 8787 2>/dev/null || true
 

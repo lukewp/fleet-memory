@@ -1,0 +1,7 @@
+[Unit]
+Description=gbrain nightly dream cycle
+
+[Service]
+Type=oneshot
+ExecStart=/data/fleet-memory/systemd/gbrain-dream.sh
+TimeoutStartSec=600
